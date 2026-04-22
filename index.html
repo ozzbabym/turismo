@@ -122,24 +122,12 @@
             padding: 12px 8px;
             text-align: left;
             border-bottom: 2px solid #cbd5e1;
-            cursor: pointer;
-            user-select: none;
         }
-        th:hover { background: #e2e8f0; }
         td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
         tr:hover { background: #f8fafc; }
         .loading { padding: 40px; text-align: center; color: #2c3e66; }
         .error { color: #b91c1c; background: #fee2e2; padding: 12px; border-radius: 12px; margin: 20px; }
         .footer-buttons { padding: 16px 24px; background: white; border-top: 1px solid #dee2e6; display: flex; gap: 12px; }
-        .cache-info {
-            background: #e8f0fe;
-            padding: 8px 24px;
-            font-size: 0.75rem;
-            color: #2c3e66;
-            border-bottom: 1px solid #cbd5e1;
-            display: flex;
-            justify-content: space-between;
-        }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
             display: inline-block;
@@ -185,7 +173,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <div class="app-container">
     <div class="header">
         <h1>🏨 Парсер реестра средств размещения</h1>
-        <p>Сначала загружаем ВСЕ отели (до 50000+), потом фильтруем мгновенно</p>
+        <p>Фильтрация на сервере — загружаем только нужные отели</p>
     </div>
 
     <div class="filters-panel">
@@ -197,43 +185,28 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         </div>
 
         <div class="filter-group">
-            <label>⭐ Присвоенная категория</label>
+            <label>⭐ Категория (звёздность)</label>
             <div class="star-multiselect" id="starsMultiselect">
-                <label><input type="checkbox" value="5"> ★★★★★ 5 звезд</label>
-                <label><input type="checkbox" value="4"> ★★★★ 4 звезды</label>
-                <label><input type="checkbox" value="3"> ★★★ 3 звезды</label>
-                <label><input type="checkbox" value="2"> ★★ 2 звезды</label>
-                <label><input type="checkbox" value="1"> ★ 1 звезда</label>
-                <label><input type="checkbox" value="0"> ❌ Нет категории</label>
+                <label><input type="checkbox" value="1"> ★★★★★ 5 звезд (категория 1)</label>
+                <label><input type="checkbox" value="2"> ★★★★ 4 звезды (категория 2)</label>
+                <label><input type="checkbox" value="3"> ★★★ 3 звезды (категория 3)</label>
+                <label><input type="checkbox" value="4"> ★★ 2 звезды (категория 4)</label>
+                <label><input type="checkbox" value="5"> ★ 1 звезда (категория 5)</label>
+                <label><input type="checkbox" value="6"> ❌ Нет категории (категория 6)</label>
             </div>
         </div>
 
-        <div class="filter-group">
-            <label>✅ Статус</label>
-            <select id="statusSelect">
-                <option value="active">Только действующие</option>
-                <option value="all">Все (включая прекращенные)</option>
-            </select>
-        </div>
-
-        <button id="loadDataBtn" class="btn-success">💾 Загрузить ВСЕ отели (один раз)</button>
-        <button id="applyFiltersBtn">🔍 Применить фильтры</button>
+        <button id="searchBtn" class="btn-success">🔍 Найти отели</button>
         <button id="stopBtn" class="btn-outline">⏹️ Отмена</button>
     </div>
 
     <div class="status-bar">
-        <span id="statusMsg">✅ Готов к работе. Нажмите «Загрузить ВСЕ отели»</span>
+        <span id="statusMsg">✅ Готов к работе. Загружаем список регионов...</span>
         <span id="progressCount"></span>
     </div>
 
-    <div class="cache-info" id="cacheInfo" style="display: none;">
-        <span>📦 Кэш: <span id="cacheSize">0</span> отелей загружено</span>
-        <span>🕒 <span id="cacheDate">—</span></span>
-        <span><button id="clearCacheBtn" style="padding:2px 8px; font-size:11px;">Очистить кэш</button></span>
-    </div>
-
     <div class="stats-row" id="statsPanel" style="display: none;">
-        <div>🏨 Всего отелей: <span id="totalCollected">0</span></div>
+        <div>🏨 Найдено отелей: <span id="totalCollected">0</span></div>
         <div>⭐ 5★: <span id="star5cnt">0</span></div>
         <div>⭐⭐⭐⭐ 4★: <span id="star4cnt">0</span></div>
         <div>⭐⭐⭐ 3★: <span id="star3cnt">0</span></div>
@@ -243,91 +216,43 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     </div>
 
     <div class="table-wrapper" id="tableWrapper">
-        <div class="loading">📌 Сначала загрузите все отели (один раз), затем применяйте фильтры</div>
+        <div class="loading">📌 Выберите регион, отметьте категории и нажмите «Найти отели»</div>
     </div>
 
     <div class="footer-buttons">
-        <button id="exportExcelBtn" style="background:#2b6e3c;">📎 Экспорт в Excel (текущий фильтр)</button>
-        <button id="clearTableBtn" class="btn-outline">🗑️ Очистить таблицу</button>
+        <button id="exportExcelBtn" style="background:#2b6e3c;">📎 Экспорт в Excel</button>
+        <button id="clearTableBtn" class="btn-outline">🗑️ Очистить</button>
     </div>
 </div>
 
 <script>
-    // Глобальные переменные
-    let allRawHotels = [];      // все загруженные сырые отели (кэш)
-    let allFormattedHotels = []; // все отформатированные отели (кэш)
-    let filteredHotels = [];     // отфильтрованные для отображения
+    let allHotels = [];
+    let filteredHotels = [];
     let isLoading = false;
     let currentController = null;
-    let totalCount = 0;
+    let regionsList = [];
 
-    // DOM элементы
+    // Маппинг категорий звёздности
+    const categoryStarsMap = {
+        1: 5,  // категория 1 → 5 звезд
+        2: 4,  // категория 2 → 4 звезды
+        3: 3,  // категория 3 → 3 звезды
+        4: 2,  // категория 4 → 2 звезды
+        5: 1,  // категория 5 → 1 звезда
+        6: 0   // категория 6 → нет категории
+    };
+
     const regionSelect = document.getElementById('regionSelect');
-    const statusSelect = document.getElementById('statusSelect');
-    const loadDataBtn = document.getElementById('loadDataBtn');
-    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    const searchBtn = document.getElementById('searchBtn');
     const stopBtn = document.getElementById('stopBtn');
     const exportBtn = document.getElementById('exportExcelBtn');
     const clearTableBtn = document.getElementById('clearTableBtn');
-    const clearCacheBtn = document.getElementById('clearCacheBtn');
     const statusMsgSpan = document.getElementById('statusMsg');
     const progressSpan = document.getElementById('progressCount');
     const statsPanel = document.getElementById('statsPanel');
     const tableWrapper = document.getElementById('tableWrapper');
-    const cacheInfo = document.getElementById('cacheInfo');
-    const cacheSizeSpan = document.getElementById('cacheSize');
-    const cacheDateSpan = document.getElementById('cacheDate');
 
-    // ---------- Работа с localStorage (кэш) ----------
-    const CACHE_KEY = 'tourism_hotels_cache';
-    const CACHE_DATE_KEY = 'tourism_hotels_date';
-
-    function saveToCache(data) {
-        try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-            localStorage.setItem(CACHE_DATE_KEY, new Date().toISOString());
-            cacheSizeSpan.innerText = data.length;
-            cacheDateSpan.innerText = new Date().toLocaleString();
-            cacheInfo.style.display = 'flex';
-        } catch(e) {
-            console.warn('Не удалось сохранить в кэш (возможно, слишком много данных)', e);
-        }
-    }
-
-    function loadFromCache() {
-        const cached = localStorage.getItem(CACHE_KEY);
-        const cachedDate = localStorage.getItem(CACHE_DATE_KEY);
-        if (cached && cachedDate) {
-            try {
-                const data = JSON.parse(cached);
-                if (data && data.length > 0) {
-                    allRawHotels = data;
-                    cacheSizeSpan.innerText = data.length;
-                    cacheDateSpan.innerText = new Date(cachedDate).toLocaleString();
-                    cacheInfo.style.display = 'flex';
-                    statusMsgSpan.innerHTML = `📦 Загружено из кэша: ${data.length} отелей. Нажмите «Применить фильтры».`;
-                    return true;
-                }
-            } catch(e) {}
-        }
-        return false;
-    }
-
-    function clearCache() {
-        if (confirm('Очистить кэш? Придётся загружать данные заново.')) {
-            localStorage.removeItem(CACHE_KEY);
-            localStorage.removeItem(CACHE_DATE_KEY);
-            allRawHotels = [];
-            allFormattedHotels = [];
-            filteredHotels = [];
-            cacheInfo.style.display = 'none';
-            tableWrapper.innerHTML = '<div class="loading">Кэш очищен. Нажмите «Загрузить ВСЕ отели».</div>';
-            statsPanel.style.display = 'none';
-            statusMsgSpan.innerHTML = "Кэш очищен";
-        }
-    }
-
-    // ---------- Загрузка регионов из HTML ----------
+    // ---------- 1. Загрузка регионов через парсинг HTML ----------
     async function loadRegionsFromSite() {
         try {
             statusMsgSpan.innerHTML = "📡 Загрузка списка регионов с сайта...";
@@ -361,45 +286,33 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
                     option.value = value;
                     option.textContent = name;
                     regionSelect.appendChild(option);
+                    regionsList.push({ id: value, name: name });
                 }
             }
             
             const count = regionSelect.options.length - 1;
-            statusMsgSpan.innerHTML = `✅ Загружено ${count} регионов. Теперь загрузите отели.`;
+            statusMsgSpan.innerHTML = `✅ Загружено ${count} регионов. Выберите субъект и нажмите «Найти отели».`;
             return true;
         } catch(e) {
             console.error('Ошибка загрузки регионов:', e);
+            statusMsgSpan.innerHTML = "⚠️ Не удалось загрузить регионы. Используйте ручной выбор.";
             regionSelect.innerHTML = '<option value="">-- Выберите регион --</option>' +
                 '<option value="78">г. Санкт-Петербург</option>' +
                 '<option value="77">г. Москва</option>' +
                 '<option value="50">Московская область</option>' +
-                '<option value="50">Республика Крым</option>' +
-                '<option value="23">Краснодарский край</option>';
+                '<option value="23">Краснодарский край</option>' +
+                '<option value="91">Республика Крым</option>' +
+                '<option value="92">г. Севастополь</option>' +
+                '<option value="66">Свердловская область</option>' +
+                '<option value="54">Новосибирская область</option>';
             return false;
         }
     }
 
-    // ---------- Извлечение звёзд ----------
-    function extractStars(category) {
-        if (!category || !category.name) return 0;
-        const catName = category.name.toLowerCase().trim();
-        
-        const starsMap = {
-            'пять звезд': 5, 'четыре звезды': 4, 'три звезды': 3,
-            'две звезды': 2, 'одна звезда': 1, 'нет категории': 0
-        };
-        if (starsMap[catName] !== undefined) return starsMap[catName];
-        if (catName.includes('пять') || catName.includes('5')) return 5;
-        if (catName.includes('четыре') || catName.includes('4')) return 4;
-        if (catName.includes('три') || catName.includes('3')) return 3;
-        if (catName.includes('две') || catName.includes('2')) return 2;
-        if (catName.includes('одна') || catName.includes('1')) return 1;
-        return 0;
-    }
-
-    // ---------- Извлечение муниципального образования ----------
+    // ---------- 2. Извлечение муниципального образования ----------
     function extractMunicipality(address) {
         if (!address) return '';
+        
         const patterns = [
             /(муниципальный округ)\s+([^,]+)/i,
             /(городской округ)\s+([^,]+)/i,
@@ -408,6 +321,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             /(м\.р-н)\s+([^,]+)/i,
             /(район)\s+([^,]+)/i
         ];
+        
         for (let pattern of patterns) {
             const match = address.match(pattern);
             if (match) {
@@ -415,38 +329,94 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
                 if (value.length > 2 && value.length < 60) return value;
             }
         }
+        
         if (address.includes('Санкт-Петербург')) return 'Санкт-Петербург';
         if (address.includes('Москва') && !address.includes('область')) return 'Москва';
+        if (address.includes('Севастополь')) return 'Севастополь';
+        
         return '';
     }
 
-    // ---------- Загрузка ВСЕХ отелей с пагинацией ----------
-    async function fetchAllHotelsWithPagination() {
-        const limit = 1000;
+    // ---------- 3. Загрузка отелей с фильтрацией на сервере ----------
+    async function fetchHotelsWithFilters(regionId, categoryIds) {
+        const limit = 100;
         let page = 0;
         let allItems = [];
         let total = null;
         
         while (true) {
-            const url = `https://tourism.fsa.gov.ru/api/v1/resorts/hotels/showcase?page=${page}&limit=${limit}`;
+            let url = `https://tourism.fsa.gov.ru/api/v1/resorts/hotels/showcase?page=${page}&limit=${limit}`;
+            
+            if (regionId && regionId !== '') {
+                url += `&regionIdList=${regionId}`;
+            }
+            
+            for (let catId of categoryIds) {
+                url += `&categoryIdList=${catId}`;
+            }
+            
+            url += `&statusIdList=6`;
+            
             console.log(`Запрос страницы ${page}:`, url);
             statusMsgSpan.innerHTML = `📡 Загружаем страницу ${page + 1}...`;
             
             const response = await fetch(url, { signal: currentController?.signal });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const data = await response.json();
             const items = data.items || data.data || [];
             
             if (total === null && data.total !== undefined) {
                 total = data.total;
-                totalCount = total;
-                console.log(`Всего отелей в API: ${total}`);
+                console.log(`Всего отелей по фильтрам: ${total}`);
             }
             
             if (!items.length) break;
             
-            allItems = allItems.concat(items);
+            // Форматируем данные
+            const formatted = items.map(item => {
+                let address = '';
+                if (item.addressList && item.addressList.length > 0) {
+                    address = item.addressList[0].name || '';
+                }
+                
+                const categoryId = item.category?.id;
+                const stars = categoryStarsMap[categoryId] || 0;
+                const isActive = (item.status?.name === 'Действует');
+                
+                let starsText = '';
+                if (stars === 0) starsText = 'Нет категории';
+                else if (stars === 1) starsText = '★☆☆☆☆';
+                else if (stars === 2) starsText = '★★☆☆☆';
+                else if (stars === 3) starsText = '★★★☆☆';
+                else if (stars === 4) starsText = '★★★★☆';
+                else if (stars === 5) starsText = '★★★★★';
+                
+                // Номерной фонд
+                let roomsCount = '—';
+                if (item.roomsCount) roomsCount = item.roomsCount;
+                else if (item.characteristics?.roomStock?.totalRooms) roomsCount = item.characteristics.roomStock.totalRooms;
+                
+                return {
+                    id: item.id,
+                    name: item.fullName || item.name || 'Без названия',
+                    stars: stars,
+                    starsText: starsText,
+                    starsLabel: stars === 0 ? 'Нет категории' : stars + ' звезд' + (stars > 1 ? 'ы' : 'а'),
+                    rooms: roomsCount,
+                    address: address,
+                    municipality: extractMunicipality(address),
+                    status: item.status?.name || 'Неизвестно',
+                    isActive: isActive,
+                    hotelType: item.hotelType?.name || 'Не указан',
+                    ownerName: item.ownerName || '—',
+                    registerRecord: item.registerRecord || '—',
+                    certificateEndDate: item.certificateEndDate || '—',
+                    url: `https://tourism.fsa.gov.ru/ru/resorts/hotels/${item.id}/about-resort`
+                };
+            });
+            
+            allItems = allItems.concat(formatted);
             statusMsgSpan.innerHTML = `📥 Загружено ${allItems.length} из ${total || '?'} отелей (страница ${page + 1})`;
             progressSpan.innerText = `${allItems.length} / ${total || '?'}`;
             
@@ -458,150 +428,75 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         return allItems;
     }
     
-    // ---------- Форматирование всех отелей (один раз) ----------
-    function formatAllHotels(rawItems) {
-        return rawItems.map(item => {
-            let address = '';
-            if (item.addressList && item.addressList.length > 0) {
-                address = item.addressList[0].name || '';
-            }
-            
-            const stars = extractStars(item.category);
-            const isActive = (item.status?.name === 'Действует');
-            
-            let starsText = '';
-            if (stars === 0) starsText = 'Нет категории';
-            else if (stars === 1) starsText = '★☆☆☆☆';
-            else if (stars === 2) starsText = '★★☆☆☆';
-            else if (stars === 3) starsText = '★★★☆☆';
-            else if (stars === 4) starsText = '★★★★☆';
-            else if (stars === 5) starsText = '★★★★★';
-            
-            return {
-                id: item.id,
-                name: item.fullName || item.name || 'Без названия',
-                regionName: item.region?.name || '',
-                stars: stars,
-                starsText: starsText,
-                starsLabel: stars === 0 ? 'Нет категории' : stars + ' звезд' + (stars > 1 ? 'ы' : 'а'),
-                rooms: item.roomsCount || '—',
-                address: address,
-                municipality: extractMunicipality(address),
-                status: item.status?.name || 'Неизвестно',
-                isActive: isActive,
-                hotelType: item.hotelType?.name || 'Не указан',
-                ownerName: item.ownerName || '—',
-                registerRecord: item.registerRecord || '—',
-                certificateEndDate: item.certificateEndDate || '—',
-                url: `https://tourism.fsa.gov.ru/ru/resorts/hotels/${item.id}/about-resort`
-            };
-        });
-    }
-
-    // ---------- Загрузка данных (один раз) ----------
-    async function loadAllData() {
+    // ---------- 4. Поиск отелей ----------
+    async function searchHotels() {
         if (isLoading) {
             statusMsgSpan.innerHTML = "⚠️ Загрузка уже идёт";
             return;
         }
         
-        isLoading = true;
-        currentController = new AbortController();
-        loadDataBtn.disabled = true;
-        applyFiltersBtn.disabled = false;
-        stopBtn.disabled = false;
-        statsPanel.style.display = 'none';
-        tableWrapper.innerHTML = '<div class="loading"><div class="spinner"></div> Загружаем ВСЕ отели с пагинацией...<br><br>⏳ Может занять 20-40 секунд (до 50000+ отелей)</div>';
-        statusMsgSpan.innerHTML = `🚀 Загрузка всех отелей...`;
-        progressSpan.innerText = '';
+        const regionId = regionSelect.value;
+        const regionName = regionSelect.options[regionSelect.selectedIndex]?.text;
         
-        try {
-            const rawHotels = await fetchAllHotelsWithPagination();
-            if (currentController.signal.aborted) throw new Error("Отменено");
-            
-            statusMsgSpan.innerHTML = `🔄 Форматирование ${rawHotels.length} отелей...`;
-            const formatted = formatAllHotels(rawHotels);
-            
-            if (currentController.signal.aborted) throw new Error("Отменено");
-            
-            allRawHotels = rawHotels;
-            allFormattedHotels = formatted;
-            
-            // Сохраняем в кэш
-            saveToCache(rawHotels);
-            
-            statusMsgSpan.innerHTML = `✅ Загружено ${allFormattedHotels.length} отелей! Теперь можно применять фильтры.`;
-            progressSpan.innerText = `${allFormattedHotels.length}`;
-            
-            // Показываем подсказку
-            tableWrapper.innerHTML = '<div class="loading">✅ Данные загружены!<br><br>Выберите регион, звёзды и нажмите «Применить фильтры».</div>';
-        } catch(e) {
-            if (e.name !== 'AbortError') {
-                console.error(e);
-                tableWrapper.innerHTML = '<div class="error">❌ Ошибка: ' + e.message + '<br><br>Попробуйте позже.</div>';
-                statusMsgSpan.innerHTML = "Ошибка загрузки";
-            } else {
-                statusMsgSpan.innerHTML = "⏸️ Загрузка отменена";
-                tableWrapper.innerHTML = '<div class="loading">Загрузка отменена</div>';
-            }
-        } finally {
-            isLoading = false;
-            loadDataBtn.disabled = false;
-            stopBtn.disabled = true;
-            currentController = null;
-        }
-    }
-    
-    // ---------- Применение фильтров (мгновенно, без запросов) ----------
-    function applyFilters() {
-        if (allFormattedHotels.length === 0) {
-            alert("Сначала загрузите все отели (кнопка «Загрузить ВСЕ отели»)");
-            return;
-        }
-        
-        const selectedRegionName = regionSelect.options[regionSelect.selectedIndex]?.text;
-        if (!selectedRegionName || regionSelect.value === '') {
+        if (!regionId || regionId === '') {
             alert("Выберите регион!");
             return;
         }
         
         const starChecks = document.querySelectorAll('#starsMultiselect input:checked');
-        let selectedStars = [];
-        starChecks.forEach(cb => selectedStars.push(cb.value));
+        let selectedCategoryIds = [];
+        starChecks.forEach(cb => selectedCategoryIds.push(cb.value));
         
-        if (selectedStars.length === 0) {
+        if (selectedCategoryIds.length === 0) {
             alert("Выберите хотя бы одну категорию звёзд");
             return;
         }
         
-        const onlyActive = (statusSelect.value === 'active');
+        isLoading = true;
+        currentController = new AbortController();
+        searchBtn.disabled = true;
+        stopBtn.disabled = false;
+        statsPanel.style.display = 'none';
+        tableWrapper.innerHTML = '<div class="loading"><div class="spinner"></div> Поиск отелей...<br><br>⏳ Обычно 5-15 секунд</div>';
+        statusMsgSpan.innerHTML = `🔍 Поиск отелей в регионе: ${regionName}`;
+        progressSpan.innerText = '';
         
-        statusMsgSpan.innerHTML = `🔍 Фильтрация ${allFormattedHotels.length} отелей...`;
-        
-        // Фильтрация
-        let filtered = allFormattedHotels.filter(hotel => {
-            if (hotel.regionName !== selectedRegionName) return false;
-            if (!selectedStars.includes(hotel.stars.toString())) return false;
-            if (onlyActive && !hotel.isActive) return false;
-            return true;
-        });
-        
-        // Сортировка по звёздам
-        filtered.sort((a, b) => b.stars - a.stars);
-        filteredHotels = filtered;
-        
-        renderTable(filteredHotels);
-        updateStats();
-        
-        statusMsgSpan.innerHTML = `✅ Отфильтровано ${filteredHotels.length} отелей из ${allFormattedHotels.length}`;
-        progressSpan.innerText = `${filteredHotels.length}`;
+        try {
+            const hotels = await fetchHotelsWithFilters(regionId, selectedCategoryIds);
+            
+            if (currentController.signal.aborted) throw new Error("Отменено");
+            
+            allHotels = hotels;
+            allHotels.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+            filteredHotels = [...allHotels];
+            
+            renderTable(filteredHotels);
+            updateStats();
+            
+            statusMsgSpan.innerHTML = `✅ Найдено ${allHotels.length} отелей в регионе ${regionName}`;
+            progressSpan.innerText = `${allHotels.length}`;
+        } catch(e) {
+            if (e.name !== 'AbortError') {
+                console.error(e);
+                tableWrapper.innerHTML = '<div class="error">❌ Ошибка: ' + e.message + '<br><br>Попробуйте позже или выберите другие фильтры.</div>';
+                statusMsgSpan.innerHTML = "Ошибка поиска";
+            } else {
+                statusMsgSpan.innerHTML = "⏸️ Поиск отменён";
+                tableWrapper.innerHTML = '<div class="loading">Поиск отменён</div>';
+            }
+        } finally {
+            isLoading = false;
+            searchBtn.disabled = false;
+            stopBtn.disabled = true;
+            currentController = null;
+        }
     }
     
-    function stopLoading() {
+    function stopSearch() {
         if (currentController) {
             currentController.abort();
             isLoading = false;
-            statusMsgSpan.innerHTML = "⏸️ Загрузка остановлена";
+            statusMsgSpan.innerHTML = "⏸️ Останавливаем...";
         }
     }
     
@@ -646,17 +541,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     
     function updateStats() {
         statsPanel.style.display = 'flex';
-        document.getElementById('totalCollected').innerText = allFormattedHotels.length;
-        document.getElementById('star5cnt').innerText = allFormattedHotels.filter(function(h) { return h.stars === 5; }).length;
-        document.getElementById('star4cnt').innerText = allFormattedHotels.filter(function(h) { return h.stars === 4; }).length;
-        document.getElementById('star3cnt').innerText = allFormattedHotels.filter(function(h) { return h.stars === 3; }).length;
-        document.getElementById('star2cnt').innerText = allFormattedHotels.filter(function(h) { return h.stars === 2; }).length;
-        document.getElementById('star1cnt').innerText = allFormattedHotels.filter(function(h) { return h.stars === 1; }).length;
+        document.getElementById('totalCollected').innerText = allHotels.length;
+        document.getElementById('star5cnt').innerText = allHotels.filter(function(h) { return h.stars === 5; }).length;
+        document.getElementById('star4cnt').innerText = allHotels.filter(function(h) { return h.stars === 4; }).length;
+        document.getElementById('star3cnt').innerText = allHotels.filter(function(h) { return h.stars === 3; }).length;
+        document.getElementById('star2cnt').innerText = allHotels.filter(function(h) { return h.stars === 2; }).length;
+        document.getElementById('star1cnt').innerText = allHotels.filter(function(h) { return h.stars === 1; }).length;
     }
     
     function exportToExcel() {
         if (!filteredHotels.length) {
-            alert("Нет данных для экспорта. Сначала примените фильтры.");
+            alert("Нет данных для экспорта. Сначала выполните поиск.");
             return;
         }
         
@@ -690,11 +585,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
     
     function clearTable() {
+        if (isLoading) { alert("Сначала остановите поиск"); return; }
+        allHotels = [];
         filteredHotels = [];
-        tableWrapper.innerHTML = '<div class="loading">Таблица очищена. Примените фильтры заново.</div>';
+        tableWrapper.innerHTML = '<div class="loading">Данные очищены. Выполните новый поиск.</div>';
         statsPanel.style.display = 'none';
-        document.getElementById('displayedRows').innerText = '0';
-        statusMsgSpan.innerHTML = "Таблица очищена";
+        statusMsgSpan.innerHTML = "Данные сброшены";
+        progressSpan.innerText = '';
     }
     
     function escapeHtml(str) {
@@ -707,22 +604,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         });
     }
     
-    // Инициализация
+    // ---------- Инициализация ----------
     (async function init() {
         await loadRegionsFromSite();
-        
-        // Пытаемся загрузить из кэша
-        if (loadFromCache()) {
-            allFormattedHotels = formatAllHotels(allRawHotels);
-            statusMsgSpan.innerHTML = `📦 Кэш: ${allFormattedHotels.length} отелей. Выберите фильтры и нажмите «Применить».`;
-        }
-        
-        loadDataBtn.addEventListener('click', loadAllData);
-        applyFiltersBtn.addEventListener('click', applyFilters);
-        stopBtn.addEventListener('click', stopLoading);
+        searchBtn.addEventListener('click', searchHotels);
+        stopBtn.addEventListener('click', stopSearch);
         exportBtn.addEventListener('click', exportToExcel);
         clearTableBtn.addEventListener('click', clearTable);
-        if (clearCacheBtn) clearCacheBtn.addEventListener('click', clearCache);
     })();
 </script>
 </body>
