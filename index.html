@@ -142,6 +142,11 @@
         }
         .status-active { color: #2e7d32; font-weight: bold; }
         .status-inactive { color: #c62828; }
+        .progress-detail {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-left: 10px;
+        }
     </style>
     <script>
         /*! xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
@@ -173,7 +178,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <div class="app-container">
     <div class="header">
         <h1>🏨 Парсер реестра средств размещения</h1>
-        <p>Фильтрация на сервере — загружаем только нужные отели</p>
+        <p>Фильтрация на сервере + номерной фонд из /drawer</p>
     </div>
 
     <div class="filters-panel">
@@ -296,6 +301,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         } catch(e) {
             console.error('Ошибка загрузки регионов:', e);
             statusMsgSpan.innerHTML = "⚠️ Не удалось загрузить регионы. Используйте ручной выбор.";
+            // Полный список регионов (хардкод)
             regionSelect.innerHTML = '<option value="">-- Выберите регион --</option>' +
                                     '<option value="1">Республика Адыгея (Адыгея)</option>' +
                                     '<option value="2">Республика Башкортостан</option>' +
@@ -423,13 +429,38 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         return '';
     }
 
-    // ---------- 3. Загрузка отелей с фильтрацией на сервере ----------
+    // ---------- 3. Получение номерного фонда из /drawer ----------
+    async function fetchRoomCount(hotelId, retryCount = 0) {
+        try {
+            const url = `https://tourism.fsa.gov.ru/api/v1/resorts/hotels/${hotelId}/drawer`;
+            const response = await fetch(url, { signal: currentController?.signal });
+            if (!response.ok) {
+                if (retryCount < 2) {
+                    await new Promise(r => setTimeout(r, 500));
+                    return fetchRoomCount(hotelId, retryCount + 1);
+                }
+                return '—';
+            }
+            const data = await response.json();
+            // Поле summaryApartmentCount содержит количество номеров
+            if (data && data.summaryApartmentCount !== undefined && data.summaryApartmentCount !== null) {
+                return data.summaryApartmentCount;
+            }
+            return '—';
+        } catch(e) {
+            if (e.name === 'AbortError') throw e;
+            return '—';
+        }
+    }
+
+    // ---------- 4. Загрузка отелей с фильтрацией на сервере + получение номерного фонда ----------
     async function fetchHotelsWithFilters(regionId, categoryIds) {
         const limit = 100;
         let page = 0;
         let allItems = [];
         let total = null;
         
+        // Сначала получаем список отелей без номерного фонда
         while (true) {
             let url = `https://tourism.fsa.gov.ru/api/v1/resorts/hotels/showcase?page=${page}&limit=${limit}`;
             
@@ -459,50 +490,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             
             if (!items.length) break;
             
-            // Форматируем данные
-            const formatted = items.map(item => {
-                let address = '';
-                if (item.addressList && item.addressList.length > 0) {
-                    address = item.addressList[0].name || '';
-                }
-                
-                const categoryId = item.category?.id;
-                const stars = categoryStarsMap[categoryId] || 0;
-                const isActive = (item.status?.name === 'Действует');
-                
-                let starsText = '';
-                if (stars === 0) starsText = 'Нет категории';
-                else if (stars === 1) starsText = '★☆☆☆☆';
-                else if (stars === 2) starsText = '★★☆☆☆';
-                else if (stars === 3) starsText = '★★★☆☆';
-                else if (stars === 4) starsText = '★★★★☆';
-                else if (stars === 5) starsText = '★★★★★';
-                
-                // Номерной фонд
-                let roomsCount = '—';
-                if (item.roomsCount) roomsCount = item.roomsCount;
-                else if (item.characteristics?.roomStock?.totalRooms) roomsCount = item.characteristics.roomStock.totalRooms;
-                
-                return {
-                    id: item.id,
-                    name: item.fullName || item.name || 'Без названия',
-                    stars: stars,
-                    starsText: starsText,
-                    starsLabel: stars === 0 ? 'Нет категории' : stars + ' звезд' + (stars > 1 ? 'ы' : 'а'),
-                    rooms: roomsCount,
-                    address: address,
-                    municipality: extractMunicipality(address),
-                    status: item.status?.name || 'Неизвестно',
-                    isActive: isActive,
-                    hotelType: item.hotelType?.name || 'Не указан',
-                    ownerName: item.ownerName || '—',
-                    registerRecord: item.registerRecord || '—',
-                    certificateEndDate: item.certificateEndDate || '—',
-                    url: `https://tourism.fsa.gov.ru/ru/resorts/hotels/${item.id}/about-resort`
-                };
-            });
-            
-            allItems = allItems.concat(formatted);
+            allItems = allItems.concat(items);
             statusMsgSpan.innerHTML = `📥 Загружено ${allItems.length} из ${total || '?'} отелей (страница ${page + 1})`;
             progressSpan.innerText = `${allItems.length} / ${total || '?'}`;
             
@@ -511,10 +499,67 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             await new Promise(r => setTimeout(r, 150));
         }
         
-        return allItems;
+        // Теперь для каждого отеля получаем номерной фонд из /drawer
+        statusMsgSpan.innerHTML = `🔄 Получение номерного фонда для ${allItems.length} отелей...`;
+        
+        const formattedHotels = [];
+        let processed = 0;
+        
+        for (let item of allItems) {
+            if (currentController?.signal.aborted) throw new Error("Отменено");
+            
+            // Получаем номерной фонд
+            const roomCount = await fetchRoomCount(item.id);
+            
+            let address = '';
+            if (item.addressList && item.addressList.length > 0) {
+                address = item.addressList[0].name || '';
+            }
+            
+            const categoryId = item.category?.id;
+            const stars = categoryStarsMap[categoryId] || 0;
+            const isActive = (item.status?.name === 'Действует');
+            
+            let starsText = '';
+            if (stars === 0) starsText = 'Нет категории';
+            else if (stars === 1) starsText = '★☆☆☆☆';
+            else if (stars === 2) starsText = '★★☆☆☆';
+            else if (stars === 3) starsText = '★★★☆☆';
+            else if (stars === 4) starsText = '★★★★☆';
+            else if (stars === 5) starsText = '★★★★★';
+            
+            formattedHotels.push({
+                id: item.id,
+                name: item.fullName || item.name || 'Без названия',
+                stars: stars,
+                starsText: starsText,
+                starsLabel: stars === 0 ? 'Нет категории' : stars + ' звезд' + (stars > 1 ? 'ы' : 'а'),
+                rooms: roomCount,
+                address: address,
+                municipality: extractMunicipality(address),
+                status: item.status?.name || 'Неизвестно',
+                isActive: isActive,
+                hotelType: item.hotelType?.name || 'Не указан',
+                ownerName: item.ownerName || '—',
+                registerRecord: item.registerRecord || '—',
+                certificateEndDate: item.certificateEndDate || '—',
+                url: `https://tourism.fsa.gov.ru/ru/resorts/hotels/${item.id}/about-resort`
+            });
+            
+            processed++;
+            if (processed % 10 === 0 || processed === allItems.length) {
+                statusMsgSpan.innerHTML = `🔄 Получение номерного фонда: ${processed} из ${allItems.length}`;
+                progressSpan.innerText = `${processed} / ${allItems.length}`;
+            }
+            
+            // Небольшая задержка, чтобы не перегружать сервер
+            await new Promise(r => setTimeout(r, 100));
+        }
+        
+        return formattedHotels;
     }
     
-    // ---------- 4. Поиск отелей ----------
+    // ---------- 5. Поиск отелей ----------
     async function searchHotels() {
         if (isLoading) {
             statusMsgSpan.innerHTML = "⚠️ Загрузка уже идёт";
@@ -543,7 +588,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         searchBtn.disabled = true;
         stopBtn.disabled = false;
         statsPanel.style.display = 'none';
-        tableWrapper.innerHTML = '<div class="loading"><div class="spinner"></div> Поиск отелей...<br><br>⏳ Обычно 5-15 секунд</div>';
+        tableWrapper.innerHTML = '<div class="loading"><div class="spinner"></div> Поиск отелей и получение номерного фонда...<br><br>⏳ Это может занять 1-3 минуты</div>';
         statusMsgSpan.innerHTML = `🔍 Поиск отелей в регионе: ${regionName}`;
         progressSpan.innerText = '';
         
